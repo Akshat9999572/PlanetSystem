@@ -83,10 +83,10 @@ function surfacePoint(size, lat, lon) {
   return [Math.cos(lon) * Math.sin(phi) * size, Math.sin(lat) * size, Math.sin(lon) * Math.sin(phi) * size]
 }
 
-function SurfaceFeatures({ planet, size }) {
+function SurfaceFeatures({ planet, size, compact }) {
   const { camera } = useThree(); const [close,setClose]=useState(false); const items=surfaceFeatures[planet.id] || []
-  useFrame(()=>{const next=camera.position.length() < 6.45;if(next!==close)setClose(next)})
-  return <group>{items.map((item,i)=>{const pos=surfacePoint(size*1.012,item.lat,item.lon);return <group key={item.label} position={pos}><mesh scale={item.scale*(planet.type==='gas'||planet.type==='saturn'?1.4:1)}><sphereGeometry args={[1,24,16]}/><meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={close ? .22 : .06} roughness={.7}/></mesh>{close&&<Html position={[0,item.scale*1.8,0]} center distanceFactor={7}><div className="feature-label">{item.label}</div></Html>}{planet.type==='rock'&&<mesh rotation={[Math.PI/2,0,0]} scale={item.scale*2.3}><torusGeometry args={[.7,.05,8,28]}/><meshBasicMaterial color={item.color} transparent opacity={.42}/></mesh>}</group>})}</group>
+  useFrame(()=>{const next=camera.position.length() < (compact ? 7.15 : 6.45);if(next!==close)setClose(next)})
+  return <group>{items.map((item,i)=>{const markerScale=item.scale*(compact ? .72 : 1)*(planet.type==='gas'||planet.type==='saturn'?1.4:1);const pos=surfacePoint(size*1.012,item.lat,item.lon);return <group key={item.label} position={pos}><mesh scale={markerScale}><sphereGeometry args={[1,24,16]}/><meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={close ? .22 : .06} roughness={.7}/></mesh>{close&&<Html position={[0,item.scale*(compact?1.2:1.8),0]} center distanceFactor={compact?8.5:7}><div className={`feature-label ${compact?'mobile':''}`}>{item.label}</div></Html>}{planet.type==='rock'&&<mesh rotation={[Math.PI/2,0,0]} scale={markerScale*2.3}><torusGeometry args={[.7,.05,8,28]}/><meshBasicMaterial color={item.color} transparent opacity={.42}/></mesh>}</group>})}</group>
 }
 
 const internalDetails = {
@@ -117,7 +117,7 @@ function PlanetModel({ planet, internal, compact }) {
   const viewScale = compact ? (planet.type === 'saturn' ? .58 : .68) : 1
   useFrame((state,delta)=>{if(mesh.current){mesh.current.rotation.y+=delta*(gaseous ? .072 : .052);mesh.current.rotation.z=Math.sin(state.clock.elapsedTime*.35)*.018}})
   if(internal) return <group scale={compact ? .72 : 1}><InternalPlanet planet={planet} texture={texture} size={size}/></group>
-  return <group scale={viewScale}><group ref={mesh} rotation={[.1,-.55,0]}><mesh castShadow receiveShadow><sphereGeometry args={[size,112,112]}/><meshStandardMaterial map={texture} roughness={gaseous ? .5 : .82} metalness={planet.type==='ice' ? .17 : .02} bumpMap={texture} bumpScale={gaseous ? .025 : .07}/></mesh>{(gaseous||planet.id==='पृथ्वी'||planet.type==='ice')&&<CloudShell texture={texture} size={size} planet={planet}/>}<SurfaceFeatures planet={planet} size={size}/><Atmosphere size={size} color={glow}/>{planet.type==='saturn'&&<Rings color="#e5d3a3"/>}<OrbitingMoons planet={planet} size={size}/><pointLight position={[2.5,1.8,2]} intensity={.32} color={planet.colors[2]}/></group></group>
+  return <group scale={viewScale}><group ref={mesh} rotation={[.1,-.55,0]}><mesh castShadow receiveShadow><sphereGeometry args={[size,112,112]}/><meshStandardMaterial map={texture} roughness={gaseous ? .5 : .82} metalness={planet.type==='ice' ? .17 : .02} bumpMap={texture} bumpScale={gaseous ? .025 : .07}/></mesh>{(gaseous||planet.id==='पृथ्वी'||planet.type==='ice')&&<CloudShell texture={texture} size={size} planet={planet}/>}<SurfaceFeatures planet={planet} size={size} compact={compact}/><Atmosphere size={size} color={glow}/>{planet.type==='saturn'&&<Rings color="#e5d3a3"/>}<OrbitingMoons planet={planet} size={size}/><pointLight position={[2.5,1.8,2]} intensity={.32} color={planet.colors[2]}/></group></group>
 }
 
 function InternalPlanet({ planet, texture, size }) {
@@ -158,17 +158,17 @@ function InternalPlanet({ planet, texture, size }) {
   </group>
 }
 
-const CameraControls = React.forwardRef(function CameraControls(_, ref) {
+const CameraControls = React.forwardRef(function CameraControls({ compact }, ref) {
   const controls = useRef(); const [spinning,setSpinning]=useState(false)
-  useImperativeHandle(ref,()=>({ rotate(){setSpinning(v=>!v)}, zoom(){const c=controls.current;if(c){c.dollyIn(1.45);c.update()}}, pan(){const c=controls.current;if(c){c.target.x=c.target.x>.2?-.42:.42;c.update()}}, reset(){const c=controls.current;if(c){c.reset();setSpinning(false)}} }))
-  return <OrbitControls ref={controls} enablePan enableZoom autoRotate={spinning} autoRotateSpeed={2.1} minDistance={4.2} maxDistance={10}/>
+  useImperativeHandle(ref,()=>({ rotate(){setSpinning(v=>!v)}, zoom(){const c=controls.current;if(c){c.dollyIn(compact?1.32:1.45);c.update()}}, pan(){const c=controls.current;if(c){c.target.x=c.target.x>.2?-.42:.42;c.update()}}, reset(){const c=controls.current;if(c){c.reset();setSpinning(false)}} }))
+  return <OrbitControls ref={controls} enablePan enableZoom autoRotate={spinning} autoRotateSpeed={2.1} minDistance={compact?6:4.2} maxDistance={compact?10.8:10}/>
 })
 
 function PlanetStage({ planet, internal }) {
   const controls=useRef(); const wrap=useRef(); const compact=useCompactViewport()
   useEffect(()=>controls.current?.reset(),[planet,internal])
   function snapshot(){const canvas=wrap.current?.querySelector('canvas');if(!canvas)return;const link=document.createElement('a');link.download=`${planet.name}-स्नैपशॉट.png`;link.href=canvas.toDataURL('image/png');link.click()}
-  return <div className="stage-shell" ref={wrap}><div className="stage-caption"><Sparkles size={14}/> जीवंत 3D मॉडल</div><Canvas camera={{position:[0,0,compact?8.8:6.3],fov:compact?42:38}} shadows dpr={[1,2]}><color attach="background" args={['#f7f3ea']}/><ambientLight intensity={1.35}/><directionalLight position={[4,4,4]} intensity={2.4} castShadow/><pointLight position={[-4,-2,2]} intensity={.7} color="#ffcf83"/><Suspense fallback={null}><PlanetModel planet={planet} internal={internal} compact={compact}/><ContactShadows position={[0,compact?-1.78:-2.25,0]} opacity={compact ? .24 : .34} scale={compact?4.2:6.4} blur={2.6} far={3.5}/><Stars radius={24} depth={4} count={220} factor={1.5} saturation={0} fade speed={.1}/></Suspense><CameraControls ref={controls}/></Canvas><div className="stage-controls"><button onClick={()=>controls.current?.rotate()} title="घुमाएं"><RotateCw/></button><button onClick={()=>controls.current?.zoom()} title="ज़ूम"><ZoomIn/></button><button onClick={()=>controls.current?.pan()} title="खिसकाएं"><Move/></button></div><button className="snapshot" onClick={snapshot}><Camera size={15}/> स्नैपशॉट</button></div>
+  return <div className="stage-shell" ref={wrap}><div className="stage-caption"><Sparkles size={14}/> जीवंत 3D मॉडल</div><Canvas camera={{position:[0,0,compact?8.8:6.3],fov:compact?42:38}} shadows dpr={[1,2]}><color attach="background" args={['#f7f3ea']}/><ambientLight intensity={1.35}/><directionalLight position={[4,4,4]} intensity={2.4} castShadow/><pointLight position={[-4,-2,2]} intensity={.7} color="#ffcf83"/><Suspense fallback={null}><PlanetModel planet={planet} internal={internal} compact={compact}/><ContactShadows position={[0,compact?-1.78:-2.25,0]} opacity={compact ? .24 : .34} scale={compact?4.2:6.4} blur={2.6} far={3.5}/><Stars radius={24} depth={4} count={220} factor={1.5} saturation={0} fade speed={.1}/></Suspense><CameraControls ref={controls} compact={compact}/></Canvas><div className="stage-controls"><button onClick={()=>controls.current?.rotate()} title="घुमाएं"><RotateCw/></button><button onClick={()=>controls.current?.zoom()} title="ज़ूम"><ZoomIn/></button><button onClick={()=>controls.current?.pan()} title="खिसकाएं"><Move/></button></div><button className="snapshot" onClick={snapshot}><Camera size={15}/> स्नैपशॉट</button></div>
 }
 
 function Fact({ icon:Icon,label,value }) { return <div className="fact"><span className="fact-icon"><Icon size={17}/></span><span><small>{label}</small><strong>{value}</strong></span></div> }
