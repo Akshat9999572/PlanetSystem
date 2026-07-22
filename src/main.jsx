@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { ContactShadows, Html, OrbitControls, Stars } from '@react-three/drei'
+import { ContactShadows, Html, Line, OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import { Menu, RotateCw, ZoomIn, Move, Camera, Lightbulb, ThermometerSun, Clock3, Moon, Sparkles, CircleDot, Layers3, ChevronRight, Orbit, X, Check } from 'lucide-react'
 import './styles.css'
@@ -86,7 +86,7 @@ function surfacePoint(size, lat, lon) {
 function SurfaceFeatures({ planet, size, compact }) {
   const { camera } = useThree(); const [close,setClose]=useState(false); const items=surfaceFeatures[planet.id] || []
   useFrame(()=>{const next=camera.position.length() < (compact ? 7.15 : 6.45);if(next!==close)setClose(next)})
-  return <group>{items.map((item,i)=>{const markerScale=item.scale*(compact ? .72 : 1)*(planet.type==='gas'||planet.type==='saturn'?1.4:1);const pos=surfacePoint(size*1.012,item.lat,item.lon);return <group key={item.label} position={pos}><mesh scale={markerScale}><sphereGeometry args={[1,24,16]}/><meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={close ? .22 : .06} roughness={.7}/></mesh>{(compact||close)&&<Html position={[0,item.scale*(compact?1.2:1.8),0]} center distanceFactor={compact?8.5:7}><div className={`feature-label ${compact?'mobile':''}`}>{item.label}</div></Html>}{planet.type==='rock'&&<mesh rotation={[Math.PI/2,0,0]} scale={markerScale*2.3}><torusGeometry args={[.7,.05,8,28]}/><meshBasicMaterial color={item.color} transparent opacity={.42}/></mesh>}</group>})}</group>
+  return <group>{items.map((item,i)=>{const markerScale=item.scale*(compact ? .72 : 1)*(planet.type==='gas'||planet.type==='saturn'?1.4:1);const pos=new THREE.Vector3(...surfacePoint(size*1.018,item.lat,item.lon));const normal=pos.clone().normalize();const labelPos=normal.clone().multiplyScalar(size+(compact?.42:.5)+markerScale*.9);const markerQuat=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),normal);return <group key={item.label}><group position={pos.toArray()} quaternion={markerQuat}><mesh scale={markerScale}><sphereGeometry args={[1,24,16]}/><meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={close ? .22 : .06} roughness={.7}/></mesh>{planet.type==='rock'&&<mesh scale={markerScale*2.3}><torusGeometry args={[.7,.05,8,28]}/><meshBasicMaterial color={item.color} transparent opacity={.42}/></mesh>}</group>{(compact||close)&&<><Line points={[pos.clone().multiplyScalar(1.015).toArray(),labelPos.clone().multiplyScalar(.97).toArray()]} color={item.color} lineWidth={compact?1.15:1.4} transparent opacity={.62}/><Html position={labelPos.toArray()} center distanceFactor={compact?8.5:7} occlude zIndexRange={[8,0]}><div className={`feature-label ${compact?'mobile':''}`}>{item.label}</div></Html></>}</group>})}</group>
 }
 
 const internalDetails = {
