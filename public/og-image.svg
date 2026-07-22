@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#e8f2ee"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".45" cy=".38">
+      <stop offset="0" stop-color="#fff6b9"/>
+      <stop offset=".48" stop-color="#f5bf3f"/>
+      <stop offset="1" stop-color="#e79828"/>
+    </radialGradient>
+    <linearGradient id="jupiter" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f1d7b3"/>
+      <stop offset=".18" stop-color="#b98458"/>
+      <stop offset=".32" stop-color="#ecd6b4"/>
+      <stop offset=".48" stop-color="#c59161"/>
+      <stop offset=".65" stop-color="#f0dfc2"/>
+      <stop offset=".82" stop-color="#a97950"/>
+      <stop offset="1" stop-color="#e5cba8"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#9b8464" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="116" cy="112" r="66" fill="url(#sun)"/>
+  <circle cx="116" cy="112" r="92" fill="none" stroke="#edc46c" stroke-width="3" opacity=".38"/>
+  <circle cx="116" cy="112" r="118" fill="none" stroke="#edc46c" stroke-width="2" opacity=".22"/>
+  <g filter="url(#soft)">
+    <circle cx="835" cy="338" r="210" fill="url(#jupiter)"/>
+    <ellipse cx="912" cy="380" rx="58" ry="24" fill="#a94335" opacity=".9"/>
+    <ellipse cx="785" cy="278" rx="170" ry="12" fill="#fff4d8" opacity=".5"/>
+    <ellipse cx="865" cy="455" rx="160" ry="11" fill="#8f643f" opacity=".38"/>
+  </g>
+  <text x="92" y="268" font-family="Noto Sans Devanagari, Arial, sans-serif" font-size="82" font-weight="800" fill="#263630">सौरमंडल दर्शन</text>
+  <text x="98" y="340" font-family="Noto Sans Devanagari, Arial, sans-serif" font-size="34" font-weight="600" fill="#667269">इंटरैक्टिव 3D ग्रह एक्सप्लोरर</text>
+  <text x="100" y="420" font-family="Noto Sans Devanagari, Arial, sans-serif" font-size="28" font-weight="700" fill="#3e5945">ज़ूम करें • ग्रह बदलें • आंतरिक संरचना सीखें</text>
+</svg>

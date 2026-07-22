@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Html, OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import { Menu, RotateCw, ZoomIn, Move, Camera, Lightbulb, ThermometerSun, Clock3, Moon, Sparkles, CircleDot, Layers3, ChevronRight, Orbit, X, Check } from 'lucide-react'
@@ -50,11 +50,44 @@ function makeTexture(planet) {
 
 function Rings({ color }) { return <group rotation={[Math.PI/2.35,0,.08]}>{[[2.25,2.47,.62],[2.52,2.7,.33],[2.77,3.12,.58],[3.2,3.45,.22]].map(([inner,outer,opacity],i)=><mesh key={i}><ringGeometry args={[inner,outer,128]}/><meshStandardMaterial color={i===1?'#6f6252':color} transparent opacity={opacity} side={THREE.DoubleSide} roughness={.42}/></mesh>)}</group> }
 
-function CloudShell({ texture, size, planet }) { const cloud=useRef();useFrame((_,d)=>{if(cloud.current)cloud.current.rotation.y-=d*(planet.type==='gas'?.028:.018)});return <mesh ref={cloud} scale={1.028}><sphereGeometry args={[size,96,96]}/><meshBasicMaterial map={texture} transparent opacity={planet.type==='earth'?.22:.13} depthWrite={false}/></mesh> }
+function CloudShell({ texture, size, planet }) { const cloud=useRef();useFrame((_,d)=>{if(cloud.current)cloud.current.rotation.y-=d*(planet.type==='gas' ? .028 : .018)});return <mesh ref={cloud} scale={1.028}><sphereGeometry args={[size,96,96]}/><meshBasicMaterial map={texture} transparent opacity={planet.type==='earth' ? .22 : .13} depthWrite={false}/></mesh> }
 
 function Atmosphere({ size, color }) { return <mesh scale={1.07}><sphereGeometry args={[size,96,96]}/><meshBasicMaterial color={color} transparent opacity={.12} side={THREE.BackSide} blending={THREE.AdditiveBlending}/></mesh> }
 
 function OrbitingMoons({ planet, size }) { const group=useRef();const count=planet.id==='पृथ्वी'?1:planet.id==='मंगल'?2:planet.id==='शनि'?3:planet.id==='बृहस्पति'?3:planet.id==='वरुण'?2:0;useFrame((_,d)=>{if(group.current)group.current.rotation.y+=d*.16});return <group ref={group}>{Array.from({length:count},(_,i)=>{const angle=(i/count)*Math.PI*2;const radius=size+0.7+i*.28;return <group key={i} rotation={[.25+i*.17,angle,0]}><mesh position={[radius,0,0]}><sphereGeometry args={[.075+(i%2)*.035,20,20]}/><meshStandardMaterial color={i%2?'#b3b0a3':'#e6e1cf'} roughness={.9}/></mesh></group>})}</group> }
+
+const surfaceFeatures = {
+  'बुध': [{ label:'कैलोरिस बेसिन', color:'#6e6258', lat:.18, lon:.75, scale:.1 }, { label:'ध्रुवीय छाया', color:'#d9d4ca', lat:.92, lon:-.45, scale:.055 }],
+  'शुक्र': [{ label:'अम्लीय बादल', color:'#fff0bb', lat:.28, lon:.55, scale:.08 }, { label:'मैक्सवेल पर्वत', color:'#9f6337', lat:-.2, lon:-.7, scale:.065 }],
+  'पृथ्वी': [{ label:'महासागर', color:'#155f9d', lat:.05, lon:.6, scale:.075 }, { label:'बादल पट्टी', color:'#ffffff', lat:.34, lon:-.42, scale:.06 }],
+  'मंगल': [{ label:'ओलंपस मॉन्स', color:'#9b382b', lat:.35, lon:.7, scale:.085 }, { label:'वैलेस मेरिनेरिस', color:'#6f241c', lat:-.16, lon:-.58, scale:.06 }],
+  'बृहस्पति': [{ label:'महान लाल धब्बा', color:'#a84032', lat:-.22, lon:.64, scale:.16 }, { label:'बादल पट्टियाँ', color:'#fff0d0', lat:.18, lon:-.55, scale:.08 }],
+  'शनि': [{ label:'बर्फीले छल्ले', color:'#f6e3b2', lat:.05, lon:.8, scale:.07 }, { label:'सुनहरी धारियाँ', color:'#b88752', lat:-.2, lon:-.45, scale:.07 }],
+  'अरुण': [{ label:'झुका हुआ अक्ष', color:'#d5ffff', lat:.52, lon:.52, scale:.07 }, { label:'मीथेन धुंध', color:'#78d9db', lat:-.12, lon:-.56, scale:.075 }],
+  'वरुण': [{ label:'तेज़ तूफ़ान', color:'#d7f3ff', lat:.2, lon:.62, scale:.085 }, { label:'मीथेन बादल', color:'#7fc9ff', lat:-.34, lon:-.48, scale:.07 }]
+}
+
+const internalProfiles = {
+  'बुध': { radii:[1,.52,.38,.22], colors:['#9b9489','#c08a56','#9f5f36','#ffd184'], glow:'#f0aa52' },
+  'शुक्र': { radii:[1,.72,.44,.22], colors:['#d9a25c','#e0843f','#d65b35','#ffe08d'], glow:'#ff9b45' },
+  'पृथ्वी': { radii:[1,.78,.5,.25], colors:['#2d83bd','#d48743','#e4a33b','#fff0a3'], glow:'#ffb84d' },
+  'मंगल': { radii:[1,.72,.34,.16], colors:['#b9533b','#d78642','#b85a37','#ffd48b'], glow:'#e98a4b' },
+  'बृहस्पति': { radii:[1,.84,.56,.22], colors:['#e7c79f','#d5a15f','#b96645','#ffe1a1'], glow:'#ffc06a' },
+  'शनि': { radii:[1,.82,.52,.2], colors:['#ead18a','#dcb669','#b88954','#fff0b0'], glow:'#ffd37a' },
+  'अरुण': { radii:[1,.78,.48,.22], colors:['#9be8e6','#62c0cd','#587fd6','#e1fbff'], glow:'#95f3ff' },
+  'वरुण': { radii:[1,.76,.46,.22], colors:['#2b6bd4','#3062aa','#544cc2','#d9f4ff'], glow:'#6cc9ff' }
+}
+
+function surfacePoint(size, lat, lon) {
+  const phi = Math.PI / 2 - lat
+  return [Math.cos(lon) * Math.sin(phi) * size, Math.sin(lat) * size, Math.sin(lon) * Math.sin(phi) * size]
+}
+
+function SurfaceFeatures({ planet, size }) {
+  const { camera } = useThree(); const [close,setClose]=useState(false); const items=surfaceFeatures[planet.id] || []
+  useFrame(()=>{const next=camera.position.length() < 6.45;if(next!==close)setClose(next)})
+  return <group>{items.map((item,i)=>{const pos=surfacePoint(size*1.012,item.lat,item.lon);return <group key={item.label} position={pos}><mesh scale={item.scale*(planet.type==='gas'||planet.type==='saturn'?1.4:1)}><sphereGeometry args={[1,24,16]}/><meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={close ? .22 : .06} roughness={.7}/></mesh>{close&&<Html position={[0,item.scale*1.8,0]} center distanceFactor={7}><div className="feature-label">{item.label}</div></Html>}{planet.type==='rock'&&<mesh rotation={[Math.PI/2,0,0]} scale={item.scale*2.3}><torusGeometry args={[.7,.05,8,28]}/><meshBasicMaterial color={item.color} transparent opacity={.42}/></mesh>}</group>})}</group>
+}
 
 const internalDetails = {
   'बुध': { density:'बहुत बड़ा धातु कोर', magnetic:'कमज़ोर चुंबकीय क्षेत्र', heat:'धीरे-धीरे ठंडी होती चट्टान', layers:['पतली धूसर क्रस्ट','सिलिकेट मेंटल','तरल धातु भाग','ठोस लोहे का कोर'] },
@@ -82,21 +115,21 @@ function PlanetModel({ planet, internal, compact }) {
   const mesh = useRef(); const texture = useMemo(()=>makeTexture(planet),[planet]); const size = planet.id==='बुध'?1.45:planet.id==='मंगल'?1.65:planet.id==='पृथ्वी'||planet.id==='शुक्र'?1.76:2.05
   const gaseous=['gas','saturn','cloud'].includes(planet.type); const glow=planet.type==='ice'?'#58c4ef':planet.id==='मंगल'?'#f09964':planet.id==='पृथ्वी'?'#5aaef0':planet.colors[2]
   const viewScale = compact ? (planet.type === 'saturn' ? .58 : .68) : 1
-  useFrame((state,delta)=>{if(mesh.current){mesh.current.rotation.y+=delta*(gaseous?.072:.052);mesh.current.rotation.z=Math.sin(state.clock.elapsedTime*.35)*.018}})
+  useFrame((state,delta)=>{if(mesh.current){mesh.current.rotation.y+=delta*(gaseous ? .072 : .052);mesh.current.rotation.z=Math.sin(state.clock.elapsedTime*.35)*.018}})
   if(internal) return <group scale={compact ? .72 : 1}><InternalPlanet planet={planet} texture={texture} size={size}/></group>
-  return <group scale={viewScale}><group ref={mesh} rotation={[.1,-.55,0]}><mesh castShadow receiveShadow><sphereGeometry args={[size,112,112]}/><meshStandardMaterial map={texture} roughness={gaseous?.5:.82} metalness={planet.type==='ice'?.17:.02} bumpMap={texture} bumpScale={gaseous?.025:.07}/></mesh>{(gaseous||planet.id==='पृथ्वी'||planet.type==='ice')&&<CloudShell texture={texture} size={size} planet={planet}/>}<Atmosphere size={size} color={glow}/>{planet.type==='saturn'&&<Rings color="#e5d3a3"/>}<OrbitingMoons planet={planet} size={size}/><pointLight position={[2.5,1.8,2]} intensity={.32} color={planet.colors[2]}/></group></group>
+  return <group scale={viewScale}><group ref={mesh} rotation={[.1,-.55,0]}><mesh castShadow receiveShadow><sphereGeometry args={[size,112,112]}/><meshStandardMaterial map={texture} roughness={gaseous ? .5 : .82} metalness={planet.type==='ice' ? .17 : .02} bumpMap={texture} bumpScale={gaseous ? .025 : .07}/></mesh>{(gaseous||planet.id==='पृथ्वी'||planet.type==='ice')&&<CloudShell texture={texture} size={size} planet={planet}/>}<SurfaceFeatures planet={planet} size={size}/><Atmosphere size={size} color={glow}/>{planet.type==='saturn'&&<Rings color="#e5d3a3"/>}<OrbitingMoons planet={planet} size={size}/><pointLight position={[2.5,1.8,2]} intensity={.32} color={planet.colors[2]}/></group></group>
 }
 
 function InternalPlanet({ planet, texture, size }) {
   const group=useRef(); const flow=useRef(); const pulse=useRef()
-  const detail=internalDetails[planet.id]; const gas=['gas','saturn','cloud'].includes(planet.type); const ice=planet.type==='ice'
-  const palette=gas?['#e8d1a7','#d99155','#cc6e3b','#fff0a6']:ice?['#9ee9ef','#4fb5c6','#4169c7','#dff9ff']:planet.type==='earth'?['#2f84bf','#d48545','#e3b045','#fff1a8']:['#b76a4f','#de8d45','#ce5f35','#ffe08c']
-  const radii=[size,size*.75,size*.47,size*.22]
+  const detail=internalDetails[planet.id]; const profile=internalProfiles[planet.id]; const gas=['gas','saturn','cloud'].includes(planet.type); const ice=planet.type==='ice'
+  const palette=profile.colors
+  const radii=profile.radii.map(r=>size*r)
   useFrame((state,d)=>{if(group.current)group.current.rotation.y+=d*.13;if(flow.current)flow.current.rotation.z-=d*.35;if(pulse.current){const s=1+Math.sin(state.clock.elapsedTime*2.6)*.07;pulse.current.scale.setScalar(s)}})
   return <group ref={group} rotation={[.18,-.7,0]}>
     <mesh castShadow receiveShadow>
       <sphereGeometry args={[radii[0],128,80,0.2,Math.PI*1.55]}/>
-      <meshStandardMaterial map={texture} roughness={.72} metalness={ice?.12:.03}/>
+      <meshStandardMaterial map={texture} roughness={.72} metalness={ice ? .12 : .03}/>
     </mesh>
     <mesh scale={1.018}>
       <sphereGeometry args={[radii[0],128,80,0.2,Math.PI*1.55]}/>
@@ -104,17 +137,17 @@ function InternalPlanet({ planet, texture, size }) {
     </mesh>
     {radii.slice(1).map((radius,i)=><mesh key={i} position={[.42+i*.22,0,.05+i*.03]} castShadow>
       <sphereGeometry args={[radius,96,64,0,Math.PI*1.72]}/>
-      <meshStandardMaterial color={palette[i+1]} roughness={i===2?.35:.62} emissive={i===2?palette[3]:'#000000'} emissiveIntensity={i===2?.55:.04}/>
+      <meshStandardMaterial color={palette[i+1]} roughness={i===2 ? .35 : .62} emissive={i===2?palette[3]:'#000000'} emissiveIntensity={i===2 ? .55 : .04}/>
     </mesh>)}
     <group ref={flow} position={[.54,0,.08]}>
       {[0,1,2,3,4].map(i=><mesh key={i} rotation={[Math.PI/2,(i*Math.PI)/5,.35]} scale={[1,1,.08]}>
         <torusGeometry args={[radii[1]*(.72+i*.045),.008,8,88]}/>
-        <meshBasicMaterial color={i%2?'#fff0a6':'#ff9b4c'} transparent opacity={.34}/>
+        <meshBasicMaterial color={i%2?profile.glow:palette[2]} transparent opacity={gas || ice ? .42 : .28}/>
       </mesh>)}
     </group>
     <mesh ref={pulse} position={[1.1,0,.14]}>
       <sphereGeometry args={[radii[3]*.82,64,64]}/>
-      <meshStandardMaterial color={palette[3]} emissive="#ffb13e" emissiveIntensity={1.15} roughness={.25}/>
+      <meshStandardMaterial color={palette[3]} emissive={profile.glow} emissiveIntensity={gas ? .75 : 1.15} roughness={.25}/>
     </mesh>
     {planet.type==='saturn'&&<Rings color="#dbc28d"/>}
     <Html position={[-1.75,1.45,0]} center distanceFactor={7}><div className="internal-label">{detail.layers[0]}</div></Html>
